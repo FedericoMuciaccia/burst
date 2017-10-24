@@ -53,6 +53,7 @@ dataset = h5py.File(file_name)
 def view_image(image):
     pyplot.imshow(image, interpolation='none', origin="lower")
     pyplot.show()
+    #pyplot.savefig('example.jpg', dpi=300)
 
 # plot the first RGB spectrogram (index=0, all the detectors superimposed)
 view_image(dataset['RGB_spectrogram'][0])
