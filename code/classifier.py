@@ -28,7 +28,7 @@ from matplotlib import pyplot
 
 level = 6
 
-signal_to_noise_ratio = 20
+signal_to_noise_ratio = 40
 
 signal_file_path = '/storage/users/Muciaccia/burst/data/small_set_g_modes/SNR_{}/level_{}.hdf5'.format(signal_to_noise_ratio, level)
 signal_images = h5py.File(signal_file_path)['spectro']
@@ -61,7 +61,7 @@ classes = to_categorical.fit_transform(classes.reshape(-1,1)) # TODO
 model = keras.models.Sequential() # TODO model functional API e layer keras.Input
 
 model.add(keras.layers.ZeroPadding2D(input_shape=[height, width, channels]))
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True)) # TODO check initializers
+model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True, kernel_initializer='glorot_uniform', bias_initializer='zeros')) # TODO check initializers
 model.add(keras.layers.Activation('relu'))
 #keras.layers.normalization.BatchNormalization
 model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='same'))
@@ -70,31 +70,31 @@ model.add(keras.layers.Dropout(rate=0.1))
 model.add(keras.layers.ZeroPadding2D())
 model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
 model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='same')) # TODO vs 'valid' (vedere ultimo layer)
+model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid')) # TODO vs 'same' (vedere ultimo layer)
 model.add(keras.layers.Dropout(rate=0.1))
 
 model.add(keras.layers.ZeroPadding2D())
 model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
 model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='same'))
+model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid'))
 model.add(keras.layers.Dropout(rate=0.1))
 
 model.add(keras.layers.ZeroPadding2D())
 model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
 model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='same'))
+model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid'))
 model.add(keras.layers.Dropout(rate=0.1))
 
 model.add(keras.layers.ZeroPadding2D())
 model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
 model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='same'))
+model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid'))
 model.add(keras.layers.Dropout(rate=0.1))
 
 model.add(keras.layers.ZeroPadding2D())
 model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
 model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='same'))
+model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid'))
 model.add(keras.layers.Dropout(rate=0.1))
 
 model.add(keras.layers.Flatten())
@@ -124,7 +124,7 @@ history = model.fit(images, classes,
 	epochs=number_of_epochs,
 	verbose=True,
 	#validation_data=(validation_images, validation_classes),
-	validation_split=0.5,
+	#validation_split=0.5,
 	shuffle=True, # train data shuffled at each epoch. validation data never shuffled
 	#callbacks=[early_stopping]
 	)
@@ -149,6 +149,11 @@ predicted_classes = numpy.greater(predicted_signal_probabilities, threshold)
 
 is_correctly_predicted = numpy.equal(predicted_classes,true_classes)
 misclassified_images = images[numpy.logical_not(is_correctly_predicted)]
+misclassified_classes = true_classes[numpy.logical_not(is_correctly_predicted)]
+
+print('misclassified images:',len(misclassified_images))
+
+# 911, 1250
 
 def view_image(image):
     pyplot.imshow(image, interpolation='none', origin="lower")
