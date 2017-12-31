@@ -41,7 +41,7 @@ noise_images = h5py.File(noise_file_path)['spectro']
 noise_number_of_samples, height, width, channels = noise_images.shape
 # TODO randomizzare il campione di solo rumore ad ogni nuova generazione del dataset
 
-# TODO per aggirare la momentanea  possibilità che le immagini generate di segnale siano di più di quelle di noise (le due classi devono essere equipopolate)
+# the two classes should be equipopulated
 number_of_samples = numpy.min([signal_number_of_samples, noise_number_of_samples])
 
 signal_images = h5py.File(signal_file_path)['spectro'][slice(number_of_samples)] # TODO lentissimo
@@ -64,15 +64,18 @@ images, classes = sklearn.utils.shuffle(images, classes)
 #width = 256 # time bins
 #channels = 3 # number of detectors
 
-number_of_classes = 2 # 4
+number_of_classes = 2 # TODO 4
 to_categorical = sklearn.preprocessing.OneHotEncoder(n_values=number_of_classes, sparse=False, dtype=numpy.float32)
 classes = to_categorical.fit_transform(classes.reshape(-1,1)) # TODO
 
 #########################
 
-# TODO provare a fare una rete puramente convolutiva, senza max pooling e flatten e fully connected finali
-
 # model definition
+
+# NOTA: comanda il lato corto dell'immagine, che è di 64
+# immagini 64x256 pixels, quindi 6 blocchi convolutivi (2^6=64 level=6)
+
+# TODO provare a fare una rete puramente convolutiva, senza max pooling e flatten e fully connected finali
 model = keras.models.Sequential() # TODO model functional API e layer keras.Input
 
 model.add(keras.layers.ZeroPadding2D(input_shape=[height, width, channels]))
@@ -116,7 +119,7 @@ model.add(keras.layers.Flatten())
 model.add(keras.layers.Dense(units=number_of_classes, use_bias=True)) # TODO check initializers
 model.add(keras.layers.Activation('softmax'))
 
-model.summary()
+model.summary() # TODO scriverlo su file, magari tramite la nuova sintassi della funzione print di python
 print('number of parameters:', model.count_params())
 
 # model compiling
@@ -126,14 +129,36 @@ model.compile(loss='categorical_crossentropy',
 
 # save untrained model
 model.save('/storage/users/Muciaccia/burst/models/untrained_model.hdf5')
+# (saving the whole model: architecture + weights + training configuration + optimizer state)
+
+####################
+
+# model training
+
+#model = keras.models.load_model('/storage/users/Muciaccia/burst/models/untrained_model.hdf5')
+# TODO il primo training è abbastanza dificile (lungo) se lo si fa coi i dropout, quindi penso che potrebbe valere la pena eliminarli soltanto per la prima tornata di dati, in modo da avvicinarsi molto al minimo
+
+number_of_iterations = 5000 # TODO vedere 1024 o 2048 # TODO il numero cambia a seconda dell'SNR e della profondità di addestramento che si vuole raggiungere
+minibatch_size = 64 # TODO valutare se metterlo a 128 per avere un po' più di statistica e stabilità del training
+
+cumultative_number_of_train_images = number_of_iterations * minibatch_size
+dataset_size = 2 * number_of_samples # noise and noise+signal
+number_of_epochs = numpy.ceil(cumultative_number_of_train_images / dataset_size).astype(int)
 
 # train parameters
-number_of_epochs = 50 # TODO forse è meglio farlo in numero di interazioni, dato che a seconda dell'SNR il numero di immagini è diverso e dunque la lunghessa di una singola epoca
-minibatch_size = 64 # TODO valutare se metterlo a 128 per avere un po' più di statistica e stabilità del training
+#number_of_epochs = 25 # TODO forse è meglio farlo in numero di interazioni, dato che a seconda dell'SNR il numero di immagini è diverso e dunque la lunghessa di una singola epoca
+
+# SNR   epochs  iterations (with minibatch 64)
+# ------------------------
+# 40    25  
+# 35    
+# 30    
+# 25    
+# 20    15  
+# 15    15      21300
 
 #early_stopping = keras.callbacks.EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=0, mode='auto')
 
-# model training
 try:
     train_history = model.fit(images, classes,
 	    batch_size=minibatch_size,
@@ -150,16 +175,17 @@ except KeyboardInterrupt: # TODO fare in modo che venga comunque salvata la hist
     print('\n')
     print('manual early stopping!') # TODO automatizzare
 
-# save train history
-train_history = pandas.DataFrame(train_history.history) # TODO mettere colonne
-train_history.to_csv('/storage/users/Muciaccia/burst/models/training_history.csv', index=False) # TODO vedere append della history per curriculum learning. oppure mettere history separate per i differenti SNR
-
 # save trained model
 model.save('/storage/users/Muciaccia/burst/models/trained_model_SNR_{}.hdf5'.format(signal_to_noise_ratio))
+# TODO oppure salvare solo i pesi, in modo da poter successivamente modificare l'entità del dropout
+
+# save train history
+train_history = pandas.DataFrame(train_history.history) # TODO mettere colonne
+train_history.to_csv('/storage/users/Muciaccia/burst/models/training_history_SNR_{}.csv'.format(signal_to_noise_ratio), index=False) # TODO vedere append della history (magari direttamente nel dataframe pandas) per curriculum learning
 
 ################################
 
-# model testing
+# model validation
 
 model = keras.models.load_model('/storage/users/Muciaccia/burst/models/trained_model_SNR_{}.hdf5'.format(signal_to_noise_ratio))
 
@@ -210,24 +236,65 @@ metrics = {'SNR':signal_to_noise_ratio,
            'efficiency (%)':100*efficiency,
            'accuracy (%)':100*accuracy}
 
-# ci sono solo falsi negativi (segnali persi). nessun falso positivo
-# TODO buono ai fini della scoperta con 5 sigma di confidenza
+# TODO scrivere i risutati su file
 
-
+# c'erano solo falsi negativi (segnali persi). nessun falso positivo
+# NOTA: buono ai fini della scoperta con 5 sigma di confidenza
 
 
 #{'SNR': 15,
-# 'accuracy (%)': 99.917254888716272,
-# 'all_validation_samples': 59218,
-# 'efficiency (%)': 99.83450977743253,
-# 'false alarms (%)': 0.0,
+# 'accuracy (%)': 99.927373563977284,
+# 'all_validation_samples': 90876,
+# 'efficiency (%)': 99.883357542145347,
+# 'false alarms (%)': 0.028610414190765439,
+# 'false_negatives': 53,
+# 'false_positives': 13,
 # 'level': 6,
-# 'misclassified_images': 49,
-# 'missed signals (%)': 0.1654902225674626,
-# 'purity (%)': 100.0,
-# 'rejected noise (%)': 100.0,
-# 'selected signals (%)': 99.834509777432544}
+# 'misclassified_images': 66,
+# 'missed signals (%)': 0.1166424578546591,
+# 'purity (%)': 99.97136437728534,
+# 'rejected noise (%)': 99.971389585809234,
+# 'selected signals (%)': 99.883357542145347}
 
+
+import matplotlib
+# TODO svg engine
+from matplotlib import pyplot
+
+fig_predictions = pyplot.figure(figsize=[9,6])
+ax1 = fig_predictions.add_subplot(111) # TODO
+# predicted as noise
+n, bins, rectangles = ax1.hist(predicted_signal_probabilities[true_classes == 0], 
+    	                       bins=50,
+    	                       range=(0,1),
+    	                       #normed=True, 
+    	                       histtype='step', 
+    	                       #alpha=0.6,
+    	                       color='#ff3300',
+    	                       label='noise')
+# predicted as signal+noise
+n, bins, rectangles = ax1.hist(predicted_signal_probabilities[true_classes == 1], 
+  	                           bins=50,
+   	                           range=(0,1),
+   	                           #normed=True, 
+   	                           histtype='step', 
+   	                           #alpha=0.6,
+   	                           color='#0099ff',
+   	                           label='noise + signal')
+ax1.set_title('classifier output') # OR 'model output'
+ax1.set_ylabel('count') # OR density
+ax1.set_xlabel('predicted signal probability') # OR 'class prediction'
+tick_spacing = 0.1
+ax1.set_yscale('log')
+ax1.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(tick_spacing))
+#ax1.legend(loc='best')
+#pyplot.axvline(x=best_threshold, # TODO
+#	           color='grey', 
+#	           linestyle='dotted', 
+#	           alpha=0.8)
+ax1.legend(loc='upper center')#, frameon=False)
+fig_predictions.savefig('/storage/users/Muciaccia/burst/media/classifier_output_SNR_{}.svg'.format(signal_to_noise_ratio), bbox_inches='tight') 
+pyplot.close()
 
 
 
