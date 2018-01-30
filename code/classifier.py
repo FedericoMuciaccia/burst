@@ -26,11 +26,13 @@ import sklearn.metrics
 import pandas
 from matplotlib import pyplot
 
+# TODO fare anche rete generativa, che partendo da random noise massimizza il neurone finale di segnale, per controllare visivamente che la rete abbia capito di cosa stiamo parlando. fare la stessa cosa anche per i vari kernel
+
 level = 6
 # TODO fare diverse reti, una per livello, che collaborano nel prendere la decisione finale
 # TODO o magari anche una rete che ha in input le probabilità date dalle singole reti ai vari livelli e decide globalmente il da farsi
 
-signal_to_noise_ratio = 15 # 40 35 30 25 20 15
+signal_to_noise_ratio = 10 # 40 35 30 25 20 15 10
 
 signal_file_path = '/storage/users/Muciaccia/burst/data/INCOMPLETE_g_modes_cut_SNR_4/SNR_{}/level_{}.hdf5'.format(signal_to_noise_ratio, level)
 signal_images = h5py.File(signal_file_path)['spectro']
@@ -43,6 +45,13 @@ noise_number_of_samples, height, width, channels = noise_images.shape
 
 # the two classes should be equipopulated
 number_of_samples = numpy.min([signal_number_of_samples, noise_number_of_samples])
+
+# # TODO
+# # shuffle the noise data (before the selection)
+# images, classes = sklearn.utils.shuffle(images, classes)
+# # train-test split
+# train_images, test_images, train_classes, test_classes = sklearn.model_selection.train_test_split(dataset.images, dataset.classes, test_size=0.5, shuffle=True)
+# # TODO vedere nuova input pipeline di TensorFlow
 
 signal_images = h5py.File(signal_file_path)['spectro'][slice(number_of_samples)] # TODO lentissimo
 noise_images = h5py.File(noise_file_path)['spectro'][slice(number_of_samples)] # TODO lentissimo
@@ -146,7 +155,7 @@ dataset_size = 2 * number_of_samples # noise and noise+signal
 number_of_epochs = numpy.ceil(cumultative_number_of_train_images / dataset_size).astype(int)
 
 # train parameters
-#number_of_epochs = 25 # TODO forse è meglio farlo in numero di interazioni, dato che a seconda dell'SNR il numero di immagini è diverso e dunque la lunghessa di una singola epoca
+#number_of_epochs = 25 # TODO forse è meglio farlo in numero di interazioni, dato che a seconda dell'SNR il numero di immagini è diverso e dunque lo èla lunghessa di una singola epoca
 
 # SNR   epochs  iterations (with minibatch 64)
 # ------------------------
@@ -156,6 +165,7 @@ number_of_epochs = numpy.ceil(cumultative_number_of_train_images / dataset_size)
 # 25    
 # 20    15  
 # 15    15      21300
+# 10    25+     33500
 
 #early_stopping = keras.callbacks.EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=0, mode='auto')
 
@@ -201,6 +211,7 @@ misclassified_images = images[numpy.logical_not(is_correctly_predicted)]
 misclassified_classes = true_classes[numpy.logical_not(is_correctly_predicted)]
 
 print('misclassified images:',len(misclassified_images))
+# TODO far scivere gli indici (pre-shuffle) delle immagini misclassificate su un file separato per ogni SNR
 
 def view_image(image):
     pyplot.imshow(image, interpolation='none', origin="lower")
@@ -224,10 +235,10 @@ all_validation_samples = true_positives + false_positives + true_negatives + fal
 
 metrics = {'SNR':signal_to_noise_ratio,
            'level':level,
-           'all_validation_samples':all_validation_samples,
-           'misclassified_images':false_positives+false_negatives,
-           'false_negatives':false_negatives,
-           'false_positives':false_positives,
+           'all validation samples':all_validation_samples,
+           'misclassified images':false_positives+false_negatives,
+           'false negatives':false_negatives,
+           'false positives':false_positives,
            'rejected noise (%)':100*true_negatives/all_real_noises,
            'false alarms (%)':100*false_positives/all_real_noises,
            'missed signals (%)':100*false_negatives/all_real_signals,
@@ -255,6 +266,20 @@ metrics = {'SNR':signal_to_noise_ratio,
 # 'purity (%)': 99.97136437728534,
 # 'rejected noise (%)': 99.971389585809234,
 # 'selected signals (%)': 99.883357542145347}
+
+#{'SNR': 10,
+# 'accuracy (%)': 99.208698489651312,
+# 'all_validation_samples': 85808,
+# 'efficiency (%)': 98.885884765989189,
+# 'false alarms (%)': 0.46848778668655605,
+# 'false_negatives': 478,
+# 'false_positives': 201,
+# 'level': 6,
+# 'misclassified_images': 679,
+# 'missed signals (%)': 1.1141152340108149,
+# 'purity (%)': 99.52846787247519,
+# 'rejected noise (%)': 99.531512213313448,
+# 'selected signals (%)': 98.885884765989189}
 
 
 import matplotlib
@@ -293,6 +318,7 @@ ax1.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(tick_spacing))
 #	           linestyle='dotted', 
 #	           alpha=0.8)
 ax1.legend(loc='upper center')#, frameon=False)
+#pyplot.show()
 fig_predictions.savefig('/storage/users/Muciaccia/burst/media/classifier_output_SNR_{}.svg'.format(signal_to_noise_ratio), bbox_inches='tight') 
 pyplot.close()
 
