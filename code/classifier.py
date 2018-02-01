@@ -253,35 +253,6 @@ metrics = {'SNR':signal_to_noise_ratio,
 # NOTA: buono ai fini della scoperta con 5 sigma di confidenza
 
 
-#{'SNR': 15,
-# 'accuracy (%)': 99.927373563977284,
-# 'all_validation_samples': 90876,
-# 'efficiency (%)': 99.883357542145347,
-# 'false alarms (%)': 0.028610414190765439,
-# 'false_negatives': 53,
-# 'false_positives': 13,
-# 'level': 6,
-# 'misclassified_images': 66,
-# 'missed signals (%)': 0.1166424578546591,
-# 'purity (%)': 99.97136437728534,
-# 'rejected noise (%)': 99.971389585809234,
-# 'selected signals (%)': 99.883357542145347}
-
-#{'SNR': 10,
-# 'accuracy (%)': 99.208698489651312,
-# 'all_validation_samples': 85808,
-# 'efficiency (%)': 98.885884765989189,
-# 'false alarms (%)': 0.46848778668655605,
-# 'false_negatives': 478,
-# 'false_positives': 201,
-# 'level': 6,
-# 'misclassified_images': 679,
-# 'missed signals (%)': 1.1141152340108149,
-# 'purity (%)': 99.52846787247519,
-# 'rejected noise (%)': 99.531512213313448,
-# 'selected signals (%)': 98.885884765989189}
-
-
 import matplotlib
 # TODO svg engine
 from matplotlib import pyplot

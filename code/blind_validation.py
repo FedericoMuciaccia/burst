@@ -28,14 +28,15 @@ minimum_trained_signal_to_noise_ratio = 10
 model = keras.models.load_model('/storage/users/Muciaccia/burst/models/trained_model_SNR_{}.hdf5'.format(minimum_trained_signal_to_noise_ratio))
 
 predictions = model.predict(images, batch_size=128, verbose=1)
-# NOTE: elapsed time: 39 seconds
 
 predicted_signal_probabilities = predictions[:,1]
+
+numpy.savetxt('/storage/users/Muciaccia/burst/data/blind_validation/predicted_signal_probabilities_SNR_{}.txt'.format(minimum_trained_signal_to_noise_ratio), predicted_signal_probabilities, fmt='%f')
 
 threshold = 0.5 # TODO fine tuning ed istogramma
 predicted_classes = numpy.greater(predicted_signal_probabilities, threshold)
 
-numpy.savetxt('/storage/users/Muciaccia/burst/data/blind_validation/predicted_classes.txt', predicted_classes, fmt='%i')
+numpy.savetxt('/storage/users/Muciaccia/burst/data/blind_validation/predicted_classes_SNR_{}.txt'.format(minimum_trained_signal_to_noise_ratio), predicted_classes, fmt='%i')
 
 
 
