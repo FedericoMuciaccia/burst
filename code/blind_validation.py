@@ -1,5 +1,5 @@
 
-# Copyright (C) 2018  Federico Muciaccia (federicomuciaccia@gmail.com)
+# Copyright (C) 2018 Federico Muciaccia (federicomuciaccia@gmail.com)
 # 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,11 +19,12 @@ import keras
 import h5py
 import numpy
 
-file_path = '/storage/users/Muciaccia/burst/data/blind_validation/MixedSNR.hdf5'
+file_path = '/storage/users/Muciaccia/burst/data/new_data/BlindSet.hdf5'
 
 images = h5py.File(file_path)['spectro']
 
-minimum_trained_signal_to_noise_ratio = 10
+minimum_trained_signal_to_noise_ratio = 10 # TODO hardcoded
+print('trained SNR:', minimum_trained_signal_to_noise_ratio)
 
 model = keras.models.load_model('/storage/users/Muciaccia/burst/models/trained_model_SNR_{}.hdf5'.format(minimum_trained_signal_to_noise_ratio))
 
@@ -33,7 +34,7 @@ predicted_signal_probabilities = predictions[:,1]
 
 numpy.savetxt('/storage/users/Muciaccia/burst/data/blind_validation/predicted_signal_probabilities_SNR_{}.txt'.format(minimum_trained_signal_to_noise_ratio), predicted_signal_probabilities, fmt='%f')
 
-threshold = 0.5 # TODO fine tuning ed istogramma
+threshold = 0.5 # TODO fine tuning ed istogramma (scegliere il punto di lavoro sulla curva ROC)
 predicted_classes = numpy.greater(predicted_signal_probabilities, threshold)
 
 numpy.savetxt('/storage/users/Muciaccia/burst/data/blind_validation/predicted_classes_SNR_{}.txt'.format(minimum_trained_signal_to_noise_ratio), predicted_classes, fmt='%i')

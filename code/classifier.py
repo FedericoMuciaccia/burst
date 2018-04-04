@@ -1,5 +1,5 @@
 
-# Copyright (C) 2017  Federico Muciaccia (federicomuciaccia@gmail.com)
+# Copyright (C) 2017 Federico Muciaccia (federicomuciaccia@gmail.com)
 # 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,182 +16,110 @@
 
 
 import keras
-
-import h5py
+import h5py # TODO vedere se persiste la costrizione di importarlo dopo keras
 import numpy
 import sklearn
 import sklearn.utils
+import sklearn.model_selection
 import sklearn.preprocessing
 import sklearn.metrics
 import pandas
+
+import matplotlib
 from matplotlib import pyplot
+matplotlib.rcParams.update({'font.size': 25}) # il default è 10 # TODO attenzione che fa l'override di tutti i settaggi precedenti
 
 # TODO fare anche rete generativa, che partendo da random noise massimizza il neurone finale di segnale, per controllare visivamente che la rete abbia capito di cosa stiamo parlando. fare la stessa cosa anche per i vari kernel
 
-level = 6
-# TODO fare diverse reti, una per livello, che collaborano nel prendere la decisione finale
-# TODO o magari anche una rete che ha in input le probabilità date dalle singole reti ai vari livelli e decide globalmente il da farsi
+#########################
 
-signal_to_noise_ratio = 10 # 40 35 30 25 20 15 10
+# data loading
 
-signal_file_path = '/storage/users/Muciaccia/burst/data/INCOMPLETE_g_modes_cut_SNR_4/SNR_{}/level_{}.hdf5'.format(signal_to_noise_ratio, level)
-signal_images = h5py.File(signal_file_path)['spectro']
-signal_number_of_samples, height, width, channels = signal_images.shape
 
-noise_file_path = '/storage/users/Muciaccia/burst/data/big_set_gaussian_white_noise/level_{}.hdf5'.format(level)
-noise_images = h5py.File(noise_file_path)['spectro']
-noise_number_of_samples, height, width, channels = noise_images.shape
-# TODO randomizzare il campione di solo rumore ad ogni nuova generazione del dataset
+signal_to_noise_ratio = 40 # 40 35 30 25 20 15 10
 
-# the two classes should be equipopulated
-number_of_samples = numpy.min([signal_number_of_samples, noise_number_of_samples])
 
-# # TODO
-# # shuffle the noise data (before the selection)
-# images, classes = sklearn.utils.shuffle(images, classes)
-# # train-test split
-# train_images, test_images, train_classes, test_classes = sklearn.model_selection.train_test_split(dataset.images, dataset.classes, test_size=0.5, shuffle=True)
-# # TODO vedere nuova input pipeline di TensorFlow
+dataset = h5py.File('/storage/users/Muciaccia/burst/data/preprocessed/SNR_{}.hdf5'.format(signal_to_noise_ratio))
 
-signal_images = h5py.File(signal_file_path)['spectro'][slice(number_of_samples)] # TODO lentissimo
-noise_images = h5py.File(noise_file_path)['spectro'][slice(number_of_samples)] # TODO lentissimo
-signal_classes = numpy.ones(number_of_samples)
-noise_classes = numpy.zeros(number_of_samples)
-
-images = numpy.concatenate([signal_images, noise_images]) # TODO lentissimo # TODO vedere se la concatenazione comporta un inutile spreco del doppio della memoria
-classes = numpy.concatenate([signal_classes, noise_classes])
-# TODO vedere nuova pipeline standard di input per TensorFlow
-
-# data shuffle
-images, classes = sklearn.utils.shuffle(images, classes)
-
-#from matplotlib import pyplot
-#
-#from sklearn.model_selection import train_test_split
-
-#height = 2**level # 64 frequency divisions
-#width = 256 # time bins
-#channels = 3 # number of detectors
-
-number_of_classes = 2 # TODO 4
-to_categorical = sklearn.preprocessing.OneHotEncoder(n_values=number_of_classes, sparse=False, dtype=numpy.float32)
-classes = to_categorical.fit_transform(classes.reshape(-1,1)) # TODO
+train_images = dataset['train_images']
+train_classes = dataset['train_classes']
+test_images = dataset['test_images']
+test_classes = dataset['test_classes']
 
 #########################
 
-# model definition
-
-# NOTA: comanda il lato corto dell'immagine, che è di 64
-# immagini 64x256 pixels, quindi 6 blocchi convolutivi (2^6=64 level=6)
-
-# TODO provare a fare una rete puramente convolutiva, senza max pooling e flatten e fully connected finali
-model = keras.models.Sequential() # TODO model functional API e layer keras.Input
-
-model.add(keras.layers.ZeroPadding2D(input_shape=[height, width, channels]))
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True, kernel_initializer='glorot_uniform', bias_initializer='zeros')) # TODO check initializers a tutti i layer
-model.add(keras.layers.Activation('relu')) # TODO vedere maxout
-#keras.layers.normalization.BatchNormalization # TODO
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='same')) # TODO valutare pooling a 3 parzialmente interallacciato # TODO perché qui avevo messo padding='same'?
-model.add(keras.layers.Dropout(rate=0.1))
-
-model.add(keras.layers.ZeroPadding2D())
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
-model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid')) # TODO vs 'same' (vedere ultimo layer)
-model.add(keras.layers.Dropout(rate=0.1))
-
-model.add(keras.layers.ZeroPadding2D())
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
-model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid'))
-model.add(keras.layers.Dropout(rate=0.1))
-
-model.add(keras.layers.ZeroPadding2D())
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
-model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid'))
-model.add(keras.layers.Dropout(rate=0.1))
-
-model.add(keras.layers.ZeroPadding2D())
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
-model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid'))
-model.add(keras.layers.Dropout(rate=0.1))
-
-model.add(keras.layers.ZeroPadding2D())
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
-model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid'))
-model.add(keras.layers.Dropout(rate=0.1))
-
-model.add(keras.layers.Flatten())
-model.add(keras.layers.Dense(units=number_of_classes, use_bias=True)) # TODO check initializers
-model.add(keras.layers.Activation('softmax'))
-
-model.summary() # TODO scriverlo su file, magari tramite la nuova sintassi della funzione print di python
-print('number of parameters:', model.count_params())
-
-# model compiling
-model.compile(loss='categorical_crossentropy',
-	          optimizer=keras.optimizers.Adam(),
-	          metrics=['accuracy']) # 'categorical_accuracy', 'precision', 'recall'
-
-# save untrained model
-model.save('/storage/users/Muciaccia/burst/models/untrained_model.hdf5')
-# (saving the whole model: architecture + weights + training configuration + optimizer state)
-
-####################
-
 # model training
 
-#model = keras.models.load_model('/storage/users/Muciaccia/burst/models/untrained_model.hdf5')
+model = keras.models.load_model('/storage/users/Muciaccia/burst/models/untrained_model.hdf5')
 # TODO il primo training è abbastanza dificile (lungo) se lo si fa coi i dropout, quindi penso che potrebbe valere la pena eliminarli soltanto per la prima tornata di dati, in modo da avvicinarsi molto al minimo
 
-number_of_iterations = 5000 # TODO vedere 1024 o 2048 # TODO il numero cambia a seconda dell'SNR e della profondità di addestramento che si vuole raggiungere
 minibatch_size = 64 # TODO valutare se metterlo a 128 per avere un po' più di statistica e stabilità del training
 
+iterations = {'SNR_40':  9000, # (avendo cura di controllare la corretta veloce convergenza nelle prime epoche)
+              'SNR_35':  6000,
+              'SNR_30':  5000,
+              'SNR_25':  6000,
+              'SNR_20': 10000,
+              'SNR_15': 12000,
+              'SNR_10': 13000}
+
+number_of_iterations = iterations['SNR_{}'.format(signal_to_noise_ratio)] # TODO il numero cambia a seconda dell'SNR e della profondità di addestramento che si vuole raggiungere
 cumultative_number_of_train_images = number_of_iterations * minibatch_size
-dataset_size = 2 * number_of_samples # noise and noise+signal
+dataset_size = len(train_images)
 number_of_epochs = numpy.ceil(cumultative_number_of_train_images / dataset_size).astype(int)
 
 # train parameters
-#number_of_epochs = 25 # TODO forse è meglio farlo in numero di interazioni, dato che a seconda dell'SNR il numero di immagini è diverso e dunque lo èla lunghessa di una singola epoca
-
-# SNR   epochs  iterations (with minibatch 64)
-# ------------------------
-# 40    25  
-# 35    
-# 30    
-# 25    
-# 20    15  
-# 15    15      21300
-# 10    25+     33500
+#number_of_epochs = 25 # TODO forse è meglio farlo in numero di interazioni, dato che a seconda dell'SNR il numero di immagini è diverso e dunque lo è la lunghezza di una singola epoca
 
 #early_stopping = keras.callbacks.EarlyStopping(monitor='val_acc', min_delta=0, patience=10, verbose=0, mode='auto')
 
+class IterationHistory(keras.callbacks.Callback):
+    '''
+    callback to monitor the metrics at every iteration
+    '''
+    def on_train_begin(self, logs={}):
+        self.loss = []
+        self.accuracy = []
+        # TODO non ci sono le quantità di testing
+    
+    def on_batch_end(self, batch, logs={}):
+        self.loss.append(logs.get('loss'))
+        self.accuracy.append(logs.get('acc'))
+        # TODO non ci sono le quantità di testing
+
+iteration_history = IterationHistory()
+
 try:
-    train_history = model.fit(images, classes,
+    train_history = model.fit(train_images, train_classes,
 	    batch_size=minibatch_size,
 	    epochs=number_of_epochs,
 	    verbose=True,
-	    #validation_data=(validation_images, validation_classes),
+	    validation_data=(test_images, test_classes),
 	    #validation_split=0.5,
 	    shuffle=True, # train data shuffled at each epoch. validation data never shuffled
-	    #callbacks=[early_stopping]
+	    callbacks=[iteration_history]
+	    #callbacks=[early_stopping] # TODO mettere callback per la visualizzazione interattiva su TensorBoard
 	    # TODO far decrescere gradualmente il learning rate durante il curriculum learning
 	    # TODO far scrivere a intervalli regolari il numero di iterazioni (tipo ogni 100 iterazioni, che corrispondono a 6400 immagini, per poi poter fare il grafico del curriculum learning)
 	    )
 except KeyboardInterrupt: # TODO fare in modo che venga comunque salvata la history
     print('\n')
-    print('manual early stopping!') # TODO automatizzare
+    print('manual early stopping!') # TODO automatizzare, magari tramite un callback
 
-# save trained model
+# save the trained model
 model.save('/storage/users/Muciaccia/burst/models/trained_model_SNR_{}.hdf5'.format(signal_to_noise_ratio))
 # TODO oppure salvare solo i pesi, in modo da poter successivamente modificare l'entità del dropout
 
-# save train history
-train_history = pandas.DataFrame(train_history.history) # TODO mettere colonne
-train_history.to_csv('/storage/users/Muciaccia/burst/models/training_history_SNR_{}.csv'.format(signal_to_noise_ratio), index=False) # TODO vedere append della history (magari direttamente nel dataframe pandas) per curriculum learning
+# save the train history
+train_history = pandas.DataFrame(train_history.history)
+train_history.to_csv('/storage/users/Muciaccia/burst/models/training_history_SNR_{}.csv'.format(signal_to_noise_ratio), index=False)
+
+# save the detailed train history
+detailed_train_history = pandas.DataFrame({'loss': iteration_history.loss,
+                                           'accuracy': iteration_history.accuracy})
+detailed_train_history.index.name = 'iteration'
+detailed_train_history.to_csv('/storage/users/Muciaccia/burst/models/detailed_training_history_SNR_{}.csv'.format(signal_to_noise_ratio), index=True)
+# TODO non si possono avere le quantità di test per la singola iterazione ma solo per la singola epoca
 
 ################################
 
@@ -199,15 +127,17 @@ train_history.to_csv('/storage/users/Muciaccia/burst/models/training_history_SNR
 
 model = keras.models.load_model('/storage/users/Muciaccia/burst/models/trained_model_SNR_{}.hdf5'.format(signal_to_noise_ratio))
 
-predictions = model.predict(images, batch_size=128, verbose=1) # the minibatch size doesn't seem to influence the prediction time
+predictions = model.predict(test_images, batch_size=128, verbose=1) # the minibatch size doesn't seem to influence the prediction time
 predicted_signal_probabilities = predictions[:,1]
-true_classes = classes[:,1]
+true_classes = test_classes[:,1]
 
 threshold = 0.5 # TODO fine tuning ed istogramma
 predicted_classes = numpy.greater(predicted_signal_probabilities, threshold)
 
-is_correctly_predicted = numpy.equal(predicted_classes,true_classes)
-misclassified_images = images[numpy.logical_not(is_correctly_predicted)]
+# TODO salvare i valori di predicted_signal_probabilities e predicted_classes per poter fare i grafici velocemente in un secondo momento
+
+is_correctly_predicted = numpy.equal(predicted_classes, true_classes)
+misclassified_images = test_images[numpy.logical_not(is_correctly_predicted)]
 misclassified_classes = true_classes[numpy.logical_not(is_correctly_predicted)]
 
 print('misclassified images:',len(misclassified_images))
@@ -216,10 +146,15 @@ print('misclassified images:',len(misclassified_images))
 def view_image(image):
     pyplot.imshow(image, interpolation='none', origin="lower")
     pyplot.show()
-    #pyplot.savefig('example.jpg', dpi=300)
+    #pyplot.savefig('example.jpg') # TODO levare bordo bianco
+    pyplot.close()
 
-for image in misclassified_images:
+for image in misclassified_images[slice(0,5)]: # print only 5 images
     view_image(image)
+
+indices = numpy.arange(len(test_images))
+misclassified_indices = indices[numpy.logical_not(is_correctly_predicted)]
+# TODO attenzione alla operazioni di shuffle fatta in precedenza
 
 confusion_matrix = sklearn.metrics.confusion_matrix(true_classes, predicted_classes)
 [[true_negatives,false_positives],[false_negatives,true_positives]] = [[predicted_0_true_0,predicted_1_true_0],[predicted_0_true_1,predicted_1_true_1]] = confusion_matrix
@@ -240,22 +175,23 @@ metrics = {'SNR':signal_to_noise_ratio,
            'false negatives':false_negatives,
            'false positives':false_positives,
            'rejected noise (%)':100*true_negatives/all_real_noises,
-           'false alarms (%)':100*false_positives/all_real_noises,
-           'missed signals (%)':100*false_negatives/all_real_signals,
+           'false alarms (%)':100*false_positives/all_predicted_as_signals, #all_real_noises, # TODO capire meglio!!! (dovrebbe essere 1 - purity)
+           'missed signals (%)':100*false_negatives/all_real_signals, # TODO il false dismissal è 1-efficiency ?
            'selected signals (%)':100*true_positives/all_real_signals,
            'purity (%)':100*purity,
            'efficiency (%)':100*efficiency,
            'accuracy (%)':100*accuracy}
 
-# TODO scrivere i risutati su file
+results = pandas.DataFrame(metrics, index=[signal_to_noise_ratio])
+results.to_csv('/storage/users/Muciaccia/burst/models/results_SNR_{}.csv'.format(signal_to_noise_ratio), index=False)
+# TODO poi concatenarli con pandas.concat()
+# TODO magari levare le percentuali e rimettere le quantità normalizzate
 
-# c'erano solo falsi negativi (segnali persi). nessun falso positivo
-# NOTA: buono ai fini della scoperta con 5 sigma di confidenza
+# NOTA: ai fini della scoperta con 5 sigma di confidenza bisogna guardare il valore di purezza (o di false alarm)
 
+# a mio avviso si sviluppa un leggero overfitting ad SNR 15 ed SNR 10
 
-import matplotlib
-# TODO svg engine
-from matplotlib import pyplot
+# TODO provare a diminiure gradualmente sia il dropout che il learning rate
 
 fig_predictions = pyplot.figure(figsize=[9,6])
 ax1 = fig_predictions.add_subplot(111) # TODO
@@ -279,7 +215,7 @@ n, bins, rectangles = ax1.hist(predicted_signal_probabilities[true_classes == 1]
    	                           label='noise + signal')
 ax1.set_title('classifier output') # OR 'model output'
 ax1.set_ylabel('count') # OR density
-ax1.set_xlabel('predicted signal probability') # OR 'class prediction'
+ax1.set_xlabel('predicted probability to be in the "signal" class') # OR 'class prediction'
 tick_spacing = 0.1
 ax1.set_yscale('log')
 ax1.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(tick_spacing))
@@ -290,9 +226,43 @@ ax1.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(tick_spacing))
 #	           alpha=0.8)
 ax1.legend(loc='upper center')#, frameon=False)
 #pyplot.show()
-fig_predictions.savefig('/storage/users/Muciaccia/burst/media/classifier_output_SNR_{}.svg'.format(signal_to_noise_ratio), bbox_inches='tight') 
+fig_predictions.savefig('/storage/users/Muciaccia/burst/media/classifier_output_SNR_{}.jpg'.format(signal_to_noise_ratio), bbox_inches='tight') 
 pyplot.close()
 
+#############################
 
+# ROC curve
 
+thresholds = numpy.linspace(start=0 ,stop=1 ,num=101) # 100 bins
+thresholds = thresholds[1:-1] # to avoid problems at the borders
+
+efficiency_list = []
+false_alarm_list = []
+
+for threshold in thresholds:
+    predicted_classes = numpy.greater(predicted_signal_probabilities, threshold)
+    
+    confusion_matrix = sklearn.metrics.confusion_matrix(true_classes, predicted_classes)
+    [[true_negatives,false_positives],[false_negatives,true_positives]] = [[predicted_0_true_0,predicted_1_true_0],[predicted_0_true_1,predicted_1_true_1]] = confusion_matrix
+    
+    efficiency = true_positives/(true_positives + false_negatives) # recall
+    false_alarm = false_positives/(true_positives + false_positives)
+    #purity = true_positives/all_predicted_as_signals # precision
+    
+    efficiency_list.append(efficiency)
+    false_alarm_list.append(false_alarm)
+
+efficiency_list = numpy.array(efficiency_list)
+false_alarm_list = numpy.array(false_alarm_list)
+
+ROC_curve = {#'SNR':signal_to_noise_ratio,
+             #'level':level,
+             #'all validation samples':all_validation_samples,
+             'false_alarm':100*false_alarm_list,
+             #'purity (%)':100*purity,
+             'efficiency':100*efficiency_list}
+
+ROC_curve = pandas.DataFrame(ROC_curve, index=thresholds)
+ROC_curve.to_csv('/storage/users/Muciaccia/burst/models/ROC_curve_SNR_{}.csv'.format(signal_to_noise_ratio), index=False)
+# TODO magari levare le percentuali e rimettere le quantità normalizzate
 
