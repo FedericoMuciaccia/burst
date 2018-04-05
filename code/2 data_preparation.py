@@ -122,7 +122,7 @@ def data_preparation(SNR):
 
 if __name__ == '__main__':
     
-    signal_to_noise_ratio = [40, 35, 30, 25, 20, 15, 12 10, 8] # TODO hardcoded
+    signal_to_noise_ratio = [40, 35, 30, 25, 20, 15, 12, 10, 8] # TODO hardcoded
     
     for SNR in signal_to_noise_ratio:
         data_preparation(SNR)

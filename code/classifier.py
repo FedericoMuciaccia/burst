@@ -18,10 +18,10 @@
 import keras
 import h5py # TODO vedere se persiste la costrizione di importarlo dopo keras
 import numpy
-import sklearn
-import sklearn.utils
-import sklearn.model_selection
-import sklearn.preprocessing
+#import sklearn
+#import sklearn.utils
+#import sklearn.model_selection
+#import sklearn.preprocessing
 import sklearn.metrics
 import pandas
 
@@ -36,15 +36,17 @@ matplotlib.rcParams.update({'font.size': 25}) # il default è 10 # TODO attenzio
 # data loading
 
 
-signal_to_noise_ratio = 40 # 40 35 30 25 20 15 10
+signal_to_noise_ratio = 12 # 40 35 30 25 20 15 12 10 8
 
 
 dataset = h5py.File('/storage/users/Muciaccia/burst/data/preprocessed/SNR_{}.hdf5'.format(signal_to_noise_ratio))
 
-train_images = dataset['train_images']
-train_classes = dataset['train_classes']
-test_images = dataset['test_images']
-test_classes = dataset['test_classes']
+# TODO greedy VS lazy?
+train_images = dataset['train_images'].value
+train_classes = dataset['train_classes'].value
+test_images = dataset['test_images'].value
+test_classes = dataset['test_classes'].value
+# TODO vedere la nuova input pipeline di TensorFlow
 
 #########################
 
@@ -61,7 +63,9 @@ iterations = {'SNR_40':  9000, # (avendo cura di controllare la corretta veloce 
               'SNR_25':  6000,
               'SNR_20': 10000,
               'SNR_15': 12000,
-              'SNR_10': 13000}
+              'SNR_12': 12000, # TODO
+              'SNR_10': 13000,
+              'SNR_8': 13000} # TODO
 
 number_of_iterations = iterations['SNR_{}'.format(signal_to_noise_ratio)] # TODO il numero cambia a seconda dell'SNR e della profondità di addestramento che si vuole raggiungere
 cumultative_number_of_train_images = number_of_iterations * minibatch_size
@@ -96,7 +100,7 @@ try:
 	    verbose=True,
 	    validation_data=(test_images, test_classes),
 	    #validation_split=0.5,
-	    shuffle=True, # train data shuffled at each epoch. validation data never shuffled
+	    shuffle=True, #'batch' # TODO hdf5 only supports batch-sized shuffling # train data shuffled at each epoch. validation data never shuffled
 	    callbacks=[iteration_history]
 	    #callbacks=[early_stopping] # TODO mettere callback per la visualizzazione interattiva su TensorBoard
 	    # TODO far decrescere gradualmente il learning rate durante il curriculum learning
