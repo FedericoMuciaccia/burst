@@ -18,7 +18,7 @@ file_path = '/storage/users/Muciaccia/burst/data/new_data/BlindSet.hdf5'
 images = h5py.File(file_path)['spectro']
 number_of_images, time, frequency, detector = images.shape
 images = dask.array.from_array(images, chunks=[64, time, frequency, detector])
-# TODO magari leggere il file hdf5 direttamente con Dask
+# TODO magari si può leggere il file hdf5 direttamente con Dask
 
 minimum_trained_signal_to_noise_ratio = 10 # TODO hardcoded
 print('trained SNR:', minimum_trained_signal_to_noise_ratio)

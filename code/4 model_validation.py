@@ -8,15 +8,35 @@
 # You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import keras
+import h5py # TODO vedere se persiste la costrizione di importarlo dopo keras
+import numpy
+import sklearn.metrics
+import pandas
 
 import matplotlib
 from matplotlib import pyplot
 matplotlib.rcParams.update({'font.size': 25}) # il default è 10 # TODO attenzione che fa l'override di tutti i settaggi precedenti
 
 
-#####################
+level= 6 # TODO hardcoded
+signal_to_noise_ratio = 10 # TODO hardcoded
 
-# model validation
+#########################
+
+# test data loading
+
+dataset = h5py.File('/storage/users/Muciaccia/burst/data/preprocessed/SNR_{}.hdf5'.format(signal_to_noise_ratio))
+# TODO usare dask.array?
+
+# TODO greedy VS lazy?
+test_images = dataset['test_images'].value
+test_classes = dataset['test_classes'].value
+# TODO vedere la nuova input pipeline di TensorFlow
+
+#########################
+
+# model predictions
 
 model = keras.models.load_model('/storage/users/Muciaccia/burst/models/trained_model_SNR_{}.hdf5'.format(signal_to_noise_ratio))
 
@@ -28,6 +48,10 @@ threshold = 0.5 # TODO fine tuning ed istogramma
 predicted_classes = numpy.greater(predicted_signal_probabilities, threshold)
 
 # TODO salvare i valori di predicted_signal_probabilities e predicted_classes per poter fare i grafici velocemente in un secondo momento
+
+########################
+
+# visualize some misclassified images
 
 is_correctly_predicted = numpy.equal(predicted_classes, true_classes)
 misclassified_images = test_images[numpy.logical_not(is_correctly_predicted)]
@@ -48,6 +72,10 @@ for image in misclassified_images[slice(0,5)]: # print only 5 images
 indices = numpy.arange(len(test_images))
 misclassified_indices = indices[numpy.logical_not(is_correctly_predicted)]
 # TODO attenzione alla operazioni di shuffle fatta in precedenza
+
+#########################
+
+# compute the metrics
 
 confusion_matrix = sklearn.metrics.confusion_matrix(true_classes, predicted_classes)
 [[true_negatives,false_positives],[false_negatives,true_positives]] = [[predicted_0_true_0,predicted_1_true_0],[predicted_0_true_1,predicted_1_true_1]] = confusion_matrix
@@ -85,6 +113,12 @@ results.to_csv('/storage/users/Muciaccia/burst/models/results_SNR_{}.csv'.format
 # a mio avviso si sviluppa un leggero overfitting ad SNR 15 ed SNR 10
 
 # TODO provare a diminiure gradualmente sia il dropout che il learning rate
+
+######################
+
+# plot the output histogram
+
+# TODO sistemare le dimensioni del plot
 
 fig_predictions = pyplot.figure(figsize=[9,6])
 ax1 = fig_predictions.add_subplot(111) # TODO
@@ -159,4 +193,7 @@ ROC_curve = {#'SNR':signal_to_noise_ratio,
 ROC_curve = pandas.DataFrame(ROC_curve, index=thresholds)
 ROC_curve.to_csv('/storage/users/Muciaccia/burst/models/ROC_curve_SNR_{}.csv'.format(signal_to_noise_ratio), index=False)
 # TODO magari levare le percentuali e rimettere le quantità normalizzate
+
+##########################
+
 
