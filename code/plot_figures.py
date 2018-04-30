@@ -210,10 +210,13 @@ minimum_SNR = SNR.min()
 
 ROC_curve = pandas.read_csv('/storage/users/Muciaccia/burst/models/ROC_curve_SNR_{}.csv'.format(minimum_SNR))
 
+default_working_point = ROC_curve[ROC_curve.threshold == 0.5]
+
 pyplot.figure(figsize=[8,8])
 pyplot.title('ROC curve')
 # TODO pyplot.tight_layut()
 pyplot.scatter(ROC_curve.false_alarm, ROC_curve.efficiency)
+pyplot.scatter(default_working_point.false_alarm, default_working_point.efficiency, color='#ff5500', s=150)
 pyplot.xlabel('false alarm (%)')
 pyplot.ylabel('efficiency (%)')
 #pyplot.show()
