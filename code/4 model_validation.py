@@ -20,16 +20,17 @@ matplotlib.rcParams.update({'font.size': 25}) # il default è 10 # TODO attenzio
 
 import config
 
-level = config.level
+level = config.cWB_level
 all_SNR = numpy.array(config.all_SNR)
 
 for signal_to_noise_ratio in all_SNR:
+    print('SNR:', signal_to_noise_ratio)
 
     #signal_to_noise_ratio = 40
     
     #########################
     
-    # test data loading
+    # loading test data
     
     dataset = h5py.File('/storage/users/Muciaccia/burst/data/preprocessed/SNR_{}.hdf5'.format(signal_to_noise_ratio))
     # TODO usare dask.array?
@@ -63,7 +64,7 @@ for signal_to_noise_ratio in all_SNR:
     misclassified_classes = true_classes[numpy.logical_not(is_correctly_predicted)]
     
     print('misclassified images:',len(misclassified_images))
-        # TODO far scivere gli indici (pre-shuffle) delle immagini misclassificate su un file separato per ogni SNR
+    # TODO far scivere gli indici (pre-shuffle) delle immagini misclassificate su un file separato per ogni SNR
     
     def view_image(image):
         pyplot.imshow(image, interpolation='none', origin="lower")

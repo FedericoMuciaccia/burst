@@ -19,19 +19,18 @@ import sklearn.metrics
 import pandas
 import datetime
 
+import config
+
 
 # TODO fare anche rete generativa, che partendo da random noise massimizza il neurone finale di segnale, per controllare visivamente che la rete abbia capito di cosa stiamo parlando. fare la stessa cosa anche per i vari kernel
 
-level= 6 # TODO hardcoded
+level = config.cWB_level
 
-all_SNR = numpy.array([40, 35, 30, 25, 20, 15, 12, 10, 8])
-
-#signal_to_noise_ratio = 12
-
-
+all_SNR = numpy.array(config.all_SNR)
 
 for signal_to_noise_ratio in all_SNR:
     
+    #signal_to_noise_ratio = 8
     print('SNR:', signal_to_noise_ratio)
     
     #########################

@@ -16,6 +16,8 @@ import sklearn.model_selection
 import sklearn.preprocessing
 import dask.array
 
+import config
+
 
 def data_preparation(SNR):
     
@@ -23,7 +25,7 @@ def data_preparation(SNR):
     
     print('SNR:', SNR)
     
-    level = 6 # TODO hardcoded
+    level = config.cWB_level
     # TODO fare diverse reti, una per livello, che collaborano nel prendere la decisione finale
     # TODO o magari anche una rete che ha in input le probabilità date dalle singole reti ai vari livelli e decide globalmente il da farsi
     
@@ -86,7 +88,7 @@ def data_preparation(SNR):
     
     # categorical (one-hot) encoding
     
-    number_of_classes = 2 # TODO hardcoded # TODO dopo farne 4, coi glitch
+    number_of_classes = config.number_of_classes # TODO dopo farne 4, coi glitch
     to_categorical = sklearn.preprocessing.OneHotEncoder(n_values=number_of_classes, sparse=False, dtype=numpy.float32)
     train_classes = to_categorical.fit_transform(train_classes.reshape(-1,1))
     test_classes = to_categorical.fit_transform(test_classes.reshape(-1,1))
@@ -132,8 +134,6 @@ def data_preparation(SNR):
 
 if __name__ == '__main__':
     
-    signal_to_noise_ratio = [40, 35, 30, 25, 20, 15, 12, 10, 8] # TODO hardcoded
-    
-    for SNR in signal_to_noise_ratio:
-        data_preparation(SNR)
+    for signal_to_noise_ratio in config.all_SNR:
+        data_preparation(signal_to_noise_ratio)
 

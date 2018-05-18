@@ -10,9 +10,8 @@
 
 import keras
 
+import config
 
-height, width, channels = [64, 256, 3] # TODO hardcoded
-number_of_classes = 2 # TODO hardcoded
 
 # model definition
 
@@ -22,7 +21,7 @@ number_of_classes = 2 # TODO hardcoded
 # TODO provare a fare una rete puramente convolutiva, senza max pooling e flatten e fully connected finali (perché può essere resa una rete generativa)
 model = keras.models.Sequential() # TODO model functional API
 
-model.add(keras.layers.InputLayer(input_shape=[height, width, channels]))
+model.add(keras.layers.InputLayer(input_shape=[config.height, config.width, config.channels]))
 
 # TODO sperimentare anche il Residual Block (magari dato il carattere intrinsecamente perturbativo si può fare a meno della Batch Normalization?)
 def add_convolutional_block(model):
@@ -33,12 +32,12 @@ def add_convolutional_block(model):
     model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='same')) # TODO valutare pooling a 3 parzialmente interallacciato # TODO valutare 'same' VS 'valid'
     model.add(keras.layers.Dropout(rate=0.1))
 
-number_of_blocks = 6 # TODO dovrebbe essere sempre uguale al numero del level
+number_of_blocks = config.cWB_level # TODO dovrebbe essere sempre uguale al numero del level
 for i in range(number_of_blocks):
     add_convolutional_block(model)
 
 model.add(keras.layers.Flatten())
-model.add(keras.layers.Dense(units=number_of_classes, use_bias=True)) # TODO check initializers
+model.add(keras.layers.Dense(units=config.number_of_classes, use_bias=True)) # TODO check initializers
 model.add(keras.layers.Activation('softmax'))
 
 # write the model summary on a file
