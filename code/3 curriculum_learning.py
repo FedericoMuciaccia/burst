@@ -68,7 +68,7 @@ for signal_to_noise_ratio in all_SNR:
     
     minibatch_size = 64 # TODO valutare se metterlo a 128 per avere un po' più di statistica e stabilità del training
     
-    iterations = {'SNR_40': 10000, # (avendo cura di controllare la corretta veloce convergenza nelle prime epoche)
+    iterations = {'SNR_40': 10000, # (avendo cura di controllare la corretta veloce convergenza nelle prime epoche, anche se spesso non corverge per le prime 10)
                   'SNR_35':  6000,
                   'SNR_30':  5000,
                   'SNR_25':  6000,
@@ -104,6 +104,26 @@ for signal_to_noise_ratio in all_SNR:
     
     iteration_history = IterationHistory()
     
+#    # TODO per poter poi fare il filmatino dell'evoluzione dell'istogramma durante l'addestramento
+#    # TODO e per controllare se è possibile monitorare l'overfit direttamente tramite l'istogramma degli outut del solo dataset di train
+#    class PredictionHistory(keras.callbacks.Callback):
+#        '''
+#        callback to monitor the predictions at every epoch
+#        '''
+#        def on_train_begin(self, logs={}):
+#            self.train_predictions = []
+#            self.test_predictions = []
+#        
+#        def on_epoch_end(self, epoch, logs={}):
+#            self.train_predictions.append(self.model.predict(train_images, batch_size=128)[:,1]) # TODO riutilizzare quelle già computate
+#            self.test_predictions.append(self.model.predict(test_images, batch_size=128)[:,1])
+#        
+#        def on_train_end(self, logs={}):
+#            self.train_predictions = numpy.array(self.train_predictions)
+#            self.test_predictions = numpy.array(self.test_predictions)
+#    
+#    prediction_history = PredictionHistory()
+    
     tensorboard_logging = keras.callbacks.TensorBoard(log_dir='/storage/users/Muciaccia/burst/logs/{}/'.format(str(datetime.datetime.now())), # datetime.datetime.now().isoformat()
                                                       histogram_freq=0,
                                                       write_graph=False,
@@ -114,10 +134,11 @@ for signal_to_noise_ratio in all_SNR:
                                                       embeddings_layer_names=None,
                                                       embeddings_metadata=None)
     # TODO usage:
-    # in the remote server: tensorboard --logdir /full/path/to/your/logs/
+    # in the remote server: tensorboard --logdir /path/to/my/logs/
     # in the local machine: ssh -L 16006:127.0.0.1:6006 muciaccia@virgo-wn100
     # in my local browser: http://127.0.0.1:16006/
-
+    
+    # TODO magari fare un callback che salva dentro TensorBoard le immagini misclassificate quando la accuracy è sufficientemente alta (ad esempio > 0.95), in modo ca controllare in real-time come stanno andando le cose
     
     try:
         train_history = model.fit(train_images, train_classes,
@@ -127,7 +148,7 @@ for signal_to_noise_ratio in all_SNR:
     	    validation_data=(test_images, test_classes),
     	    #validation_split=0.5,
     	    shuffle=True, #'batch' # TODO hdf5 only supports batch-sized shuffling # train data shuffled at each epoch. validation data never shuffled
-    	    callbacks=[iteration_history, tensorboard_logging]
+    	    callbacks=[iteration_history] # TODO tensorboard_logging # TODO prediction_history
     	    #callbacks=[early_stopping] # TODO mettere callback per la visualizzazione interattiva su TensorBoard
     	    # TODO far decrescere gradualmente il learning rate durante il curriculum learning
     	    # TODO far scrivere a intervalli regolari il numero di iterazioni (tipo ogni 100 iterazioni, che corrispondono a 6400 immagini, per poi poter fare il grafico del curriculum learning)
@@ -139,6 +160,7 @@ for signal_to_noise_ratio in all_SNR:
     
     # save the trained model
     model.save('/storage/users/Muciaccia/burst/models/trained_model_SNR_{}.hdf5'.format(signal_to_noise_ratio))
+    print('model saved')
     # TODO oppure salvare solo i pesi, in modo da poter successivamente modificare l'entità del dropout
     
     # save the train history
@@ -146,11 +168,20 @@ for signal_to_noise_ratio in all_SNR:
     train_history.to_csv('/storage/users/Muciaccia/burst/models/training_history_SNR_{}.csv'.format(signal_to_noise_ratio), index=False)
     
     # save the detailed train history
+    # TODO metterlo direttamnete dentro .on_train_end() nel callback
     detailed_train_history = pandas.DataFrame({'loss': iteration_history.loss,
                                                'accuracy': iteration_history.accuracy})
     detailed_train_history.index.name = 'iteration'
     detailed_train_history.to_csv('/storage/users/Muciaccia/burst/models/detailed_training_history_SNR_{}.csv'.format(signal_to_noise_ratio), index=True)
     # TODO non si possono avere le quantità di test per la singola iterazione ma solo per la singola epoca
     
+#    # save the prediction history
+#    # TODO per fare il filmino con l'evoluzione degli istogrammi
+#    # TODO e per controllare se è possibile monitorare l'overfit direttamente tramite l'istogramma degli outut del solo dataset di train
+#    numpy.save('/storage/users/Muciaccia/burst/models/train_prediction_history_SNR_{}.npy'.format(signal_to_noise_ratio), prediction_history.train_predictions)
+#    numpy.save('/storage/users/Muciaccia/burst/models/test_prediction_history_SNR_{}.npy'.format(signal_to_noise_ratio), prediction_history.test_predictions)
+    
     ################################
+
+
 

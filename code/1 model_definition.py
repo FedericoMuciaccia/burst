@@ -20,44 +20,22 @@ number_of_classes = 2 # TODO hardcoded
 # immagini 64x256 pixels, quindi 6 blocchi convolutivi (2^6=64 level=6)
 
 # TODO provare a fare una rete puramente convolutiva, senza max pooling e flatten e fully connected finali (perché può essere resa una rete generativa)
-model = keras.models.Sequential() # TODO model functional API e layer keras.Input
+model = keras.models.Sequential() # TODO model functional API
 
-model.add(keras.layers.ZeroPadding2D(input_shape=[height, width, channels]))
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True, kernel_initializer='glorot_uniform', bias_initializer='zeros')) # TODO check initializers a tutti i layer
-model.add(keras.layers.Activation('relu')) # TODO vedere maxout
-#keras.layers.normalization.BatchNormalization # TODO
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='same')) # TODO valutare pooling a 3 parzialmente interallacciato # TODO perché qui avevo messo padding='same'?
-model.add(keras.layers.Dropout(rate=0.1))
+model.add(keras.layers.InputLayer(input_shape=[height, width, channels]))
 
-model.add(keras.layers.ZeroPadding2D())
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
-model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid')) # TODO vs 'same' (vedere ultimo layer)
-model.add(keras.layers.Dropout(rate=0.1))
+# TODO sperimentare anche il Residual Block (magari dato il carattere intrinsecamente perturbativo si può fare a meno della Batch Normalization?)
+def add_convolutional_block(model):
+    #model.add(keras.layers.ZeroPadding2D()) # sostituito col padding='same'
+    model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='same', use_bias=True, kernel_initializer='glorot_uniform', bias_initializer='zeros')) # TODO check initializers a tutti i layer # TODO vedere se la distribuzione con la quale si inizializza si può costringere col Gruppo di Rinormalizzazione
+    #keras.layers.normalization.BatchNormalization # TODO
+    model.add(keras.layers.Activation('relu')) # TODO vedere maxout
+    model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='same')) # TODO valutare pooling a 3 parzialmente interallacciato # TODO valutare 'same' VS 'valid'
+    model.add(keras.layers.Dropout(rate=0.1))
 
-model.add(keras.layers.ZeroPadding2D())
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
-model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid'))
-model.add(keras.layers.Dropout(rate=0.1))
-
-model.add(keras.layers.ZeroPadding2D())
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
-model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid'))
-model.add(keras.layers.Dropout(rate=0.1))
-
-model.add(keras.layers.ZeroPadding2D())
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
-model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid'))
-model.add(keras.layers.Dropout(rate=0.1))
-
-model.add(keras.layers.ZeroPadding2D())
-model.add(keras.layers.Convolution2D(filters=8, kernel_size=3, strides=1, padding='valid', use_bias=True))
-model.add(keras.layers.Activation('relu'))
-model.add(keras.layers.MaxPooling2D(pool_size=2, strides=2, padding='valid'))
-model.add(keras.layers.Dropout(rate=0.1))
+number_of_blocks = 6 # TODO dovrebbe essere sempre uguale al numero del level
+for i in range(number_of_blocks):
+    add_convolutional_block(model)
 
 model.add(keras.layers.Flatten())
 model.add(keras.layers.Dense(units=number_of_classes, use_bias=True)) # TODO check initializers
@@ -72,12 +50,12 @@ model.summary() # goes to the standard output
 summary_file.close()
 sys.stdout = old_stdout
 
-model.summary() # TODO vedere se si riesce a scriverlo su file tramite la nuova sintassi della funzione print di python
+model.summary() # TODO vedere se si riesce a scriverlo su file tramite la nuova sintassi della funzione print di python # TODO sarebbe bello che ci fosse una funzione in keras che mi genera direttamente un bel diagramma della rete, pronto per essere usato come figura
 print('number of parameters:', model.count_params())
 
 # model compiling
-model.compile(loss='categorical_crossentropy',
-	          optimizer=keras.optimizers.Adam(),
+model.compile(loss='categorical_crossentropy', # TODO keras.losses.categorical_crossentropy
+	          optimizer=keras.optimizers.Adam(), # TODO specificare direttamente in Adam il valore del decadimento del learning rate
 	          metrics=['accuracy']) # 'categorical_accuracy', 'precision', 'recall'
 
 # save untrained model

@@ -36,7 +36,7 @@ def data_preparation(SNR):
     signal_number_of_samples, height, width, channels = signal_images.shape
     print('signal images:', signal_number_of_samples)
     
-    noise_file_path = '/storage/users/Muciaccia/burst/data/new_data/Noise.hdf5'
+    noise_file_path = '/storage/users/Muciaccia/burst/data/new_data/Noise_SNR{}.hdf5'.format(SNR)
     noise_images = h5py.File(noise_file_path)['spectro']
     noise_number_of_samples, height, width, channels = noise_images.shape
     print('noise images:', noise_number_of_samples)
@@ -45,8 +45,9 @@ def data_preparation(SNR):
     
     # dataset merging
     
-    # the two classes should be equipopulated # TODO imporlo in fase di costruzione del dataset
-    number_of_samples = numpy.min([signal_number_of_samples, noise_number_of_samples, 50000]) # TODO con 100000 dà MemoryError # TODO in futuro usare direttamente la input pipeline di TensorFlow
+    # the two classes should be equipopulated
+    maximum_number_in_memory = 50000 # TODO con 100000 dà MemoryError su wn100
+    number_of_samples = numpy.min([signal_number_of_samples, noise_number_of_samples, maximum_number_in_memory]) # TODO in futuro usare direttamente la input pipeline di TensorFlow
     
     # avoid the last minibacth at the end of every epoch to be smaller than all the others
     minibatch_size = 64 # TODO hardcoded
@@ -54,8 +55,9 @@ def data_preparation(SNR):
     print('number_of_samples:', number_of_samples)
     
     signal_images = h5py.File(signal_file_path)['spectro'][slice(number_of_samples)] # TODO lentissimo
-    noise_random_index = numpy.random.randint(noise_number_of_samples - number_of_samples) # TODO sistemare meglio facendo magari direttamente un veloce shuffle del noise direttamente sugli indici del minibatch
-    noise_images = h5py.File(noise_file_path)['spectro'][slice(noise_random_index, noise_random_index + number_of_samples)] # TODO lentissimo
+    #noise_random_index = numpy.random.randint(noise_number_of_samples - number_of_samples) # TODO sistemare meglio facendo magari direttamente un veloce shuffle del noise direttamente sugli indici del minibatch
+    #noise_images = h5py.File(noise_file_path)['spectro'][slice(noise_random_index, noise_random_index + number_of_samples)] # TODO lentissimo
+    noise_images = h5py.File(noise_file_path)['spectro'][slice(number_of_samples)] # TODO lentissimo
     
     signal_classes = numpy.ones(number_of_samples)
     noise_classes = numpy.zeros(number_of_samples)
@@ -131,17 +133,6 @@ def data_preparation(SNR):
 if __name__ == '__main__':
     
     signal_to_noise_ratio = [40, 35, 30, 25, 20, 15, 12, 10, 8] # TODO hardcoded
-    # SNR images
-    # 40 11522
-    # 35 17224
-    # 20 22779
-    # 25 45122
-    # 20 109757
-    # 15 87540
-    # 12 143899
-    # 10 68079
-    # 8 25346
-    # noise 285209
     
     for SNR in signal_to_noise_ratio:
         data_preparation(SNR)

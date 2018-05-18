@@ -47,7 +47,7 @@ print('misclassified images:', len(misclassified_indices))
 
 from matplotlib import pyplot
 
-for index in misclassified_indices[0:50]:
+for index in misclassified_indices[0:10]:
     
     signal_image = misclassified_images[index]
     
