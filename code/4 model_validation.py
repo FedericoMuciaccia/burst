@@ -23,6 +23,8 @@ import config
 level = config.cWB_level
 all_SNR = numpy.array(config.all_SNR)
 
+minimum_SNR = all_SNR.min()
+
 for signal_to_noise_ratio in all_SNR:
     print('SNR:', signal_to_noise_ratio)
 
@@ -44,7 +46,7 @@ for signal_to_noise_ratio in all_SNR:
     
     # model predictions
     
-    model = keras.models.load_model('/storage/users/Muciaccia/burst/models/trained_model_SNR_{}.hdf5'.format(signal_to_noise_ratio))
+    model = keras.models.load_model('/storage/users/Muciaccia/burst/models/trained_model_SNR_{}.hdf5'.format(minimum_SNR)) #signal_to_noise_ratio # TODO inutilmente ripetuto
     
     predictions = model.predict(test_images, batch_size=128, verbose=1) # the minibatch size doesn't seem to influence the prediction time
     predicted_signal_probabilities = predictions[:,1]
