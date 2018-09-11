@@ -14,6 +14,8 @@ import numpy
 import pandas
 import glob
 
+import config
+
 import matplotlib
 from matplotlib import pyplot
 matplotlib.rcParams.update({'font.size': 23}) # il default è 10 # TODO attenzione che fa l'override di tutti i settaggi precedenti
@@ -31,21 +33,69 @@ matplotlib.rcParams.update({'font.size': 23}) # il default è 10 # TODO attenzio
 # #futuro grafico della regione di cielo
 
 levels = numpy.array([5,6,7,8])
-level = 6
+level = config.cWB_level
 
-SNR = numpy.array([40, 35, 30, 25, 20, 15, 10])
-signal_to_noise_ratio = 40 # 40 35 30 25 20 15 10
+SNR = numpy.array(config.all_SNR)
+signal_to_noise_ratio = SNR.max() # 40
 
 #signal_images = h5py.File('/storage/users/Muciaccia/burst/data/INCOMPLETE_g_modes_cut_SNR_4/SNR_{}/level_{}.hdf5'.format(signal_to_noise_ratio, level))['spectro']
-signal_images = h5py.File('/storage/users/Muciaccia/burst/data/new_data/SNR40.hdf5')['spectro']
+signal_images = h5py.File('/storage/users/Muciaccia/burst/data/new_data/SNR{}.hdf5'.format(signal_to_noise_ratio))['spectro']
+
+noise_images = h5py.File('/storage/users/Muciaccia/burst/data/new_data/Noise_SNR{}.hdf5'.format(signal_to_noise_ratio))['spectro']
 
 signal_likelihoods = h5py.File('/storage/users/Muciaccia/burst/data/INCOMPLETE_g_modes_cut_SNR_4/SNR_{}/likelihood.hdf5'.format(signal_to_noise_ratio))['spectro']
-
-noise_images = h5py.File('/storage/users/Muciaccia/burst/data/new_data/SNR_40_OLD/noise_level_{}.hdf5'.format(level))['spectro']
 
 noise_likelihoods = h5py.File('/storage/users/Muciaccia/burst/data/big_set_gaussian_white_noise/likelihood.hdf5'.format(signal_to_noise_ratio))['spectro']
 
 waveform_paths = glob.glob('/storage/users/Muciaccia/burst/data/waveforms Pablo Cerdá-Durán/g-modes/*.h5')
+
+#########################
+
+# RGB composition (separate R+G+B)
+
+# decide if to use RGB or HSL/HSV colorspace for the summation
+
+index = 1
+signal_image = signal_images[index]
+
+red_image = signal_image.copy()
+red_image[:,:,[1,2]] = 0
+green_image = signal_image.copy()
+green_image[:,:,[0,2]] = 0
+blue_image = signal_image.copy()
+blue_image[:,:,[0,1]] = 0
+
+fig, [ax1, ax2, ax3, ax4] = pyplot.subplots(nrows=4, ncols=1, sharex=True, figsize=[8,8])
+offset = -0.25
+image_extent = [-1-offset,1-offset,0,1024]
+
+#ax1.imshow(signal_image[:,:,0], interpolation='none', origin="lower", cmap='Reds_r', extent=image_extent, aspect='auto')
+ax1.imshow(red_image, interpolation='none', origin="lower", extent=image_extent, aspect='auto')
+
+ax1.set_title('RGB composition', {'fontsize':27})
+ax1.set_yticks([0,512,1024])
+ax1.set_yticklabels(['','H',''])
+#frequency_ticks = numpy.linspace(start=0, stop=1024, num=frequency_bins, endpoint=False)
+#time_ticks = numpy.linspace(start=-1, stop=1, num=frequency_bins, endpoint=True)
+
+#ax2.imshow(signal_image[:,:,1], interpolation='none', origin="lower", cmap='Greens_r', extent=image_extent, aspect='auto')
+ax2.imshow(green_image, interpolation='none', origin="lower", extent=image_extent, aspect='auto')
+
+ax2.set_yticks([0,512,1024])
+ax2.set_yticklabels(['','L',''])
+
+#ax3.imshow(signal_image[:,:,2], interpolation='none', origin="lower", cmap='Blues_r', extent=image_extent, aspect='auto')
+ax3.imshow(blue_image, interpolation='none', origin="lower", extent=image_extent, aspect='auto')
+
+ax3.set_yticks([0,512,1024])
+ax3.set_yticklabels(['','V',''])
+ax4.imshow(signal_image, interpolation='none', origin="lower", extent=image_extent, aspect='auto')
+ax4.set_yticks([0,512,1024])
+pyplot.ylabel('frequency [Hz]')
+pyplot.xlabel('post-bounce time [s]')
+pyplot.savefig('/storage/users/Muciaccia/burst/media/new_RGB_composition.jpg', bbox_inches='tight')
+pyplot.show()
+pyplot.close()
 
 #########################
 
@@ -62,17 +112,6 @@ for index in range(16): # TODO separare tutti questi plot in blocchi differenti 
     pyplot.savefig('/storage/users/Muciaccia/burst/media/SNR_{}_level_{}_index_{}.jpg'.format(signal_to_noise_ratio, level, index), bbox_inches='tight')
     pyplot.close()
     
-    signal_likelihood = signal_likelihoods[index]
-    
-    pyplot.figure(figsize=[10,10])
-    pyplot.title('SNR {} multilevel likelihood'.format(signal_to_noise_ratio))
-    pyplot.xlabel('time [bin]') # TODO vedere scala temporale
-    pyplot.ylabel('frequency [bin]') # TODO vedere scala di frequenze
-    pyplot.imshow(signal_likelihood, interpolation='none', origin="lower")
-    #pyplot.show()
-    pyplot.savefig('/storage/users/Muciaccia/burst/media/SNR_{}_likelihood_index_{}.jpg'.format(signal_to_noise_ratio, index), bbox_inches='tight')
-    pyplot.close()
-    
     noise_image = noise_images[index]
     
     pyplot.figure(figsize=[12,10])
@@ -83,6 +122,17 @@ for index in range(16): # TODO separare tutti questi plot in blocchi differenti 
     pyplot.imshow(noise_image, interpolation='none', origin="lower")
     #pyplot.show()
     pyplot.savefig('/storage/users/Muciaccia/burst/media/noise_level_{}_index_{}.jpg'.format(level, index), bbox_inches='tight')
+    pyplot.close()
+    
+    signal_likelihood = signal_likelihoods[index]
+    
+    pyplot.figure(figsize=[10,10])
+    pyplot.title('SNR {} multilevel likelihood'.format(signal_to_noise_ratio))
+    pyplot.xlabel('time [bin]') # TODO vedere scala temporale
+    pyplot.ylabel('frequency [bin]') # TODO vedere scala di frequenze
+    pyplot.imshow(signal_likelihood, interpolation='none', origin="lower")
+    #pyplot.show()
+    pyplot.savefig('/storage/users/Muciaccia/burst/media/SNR_{}_likelihood_index_{}.jpg'.format(signal_to_noise_ratio, index), bbox_inches='tight')
     pyplot.close()
     
     noise_likelihood = noise_likelihoods[index]
@@ -157,8 +207,8 @@ ax2.set_ylim((1e-5,1e-0))
 ax2.set_yscale('log')
 ax2.vlines(x=cumulative_epochs, ymin=1e-5 ,ymax=1e-0, color='gray', linestyle='dashed') # OR 'dotted'
 #pyplot.show()
-fig.savefig('/storage/users/Muciaccia/burst/media/training_history.jpg', bbox_inches='tight')
-fig.savefig('/storage/users/Muciaccia/burst/media/training_history.svg', bbox_inches='tight') # TODO facendo così è possibile salvare i grafici due volte in due formati diversi!
+fig.savefig('/storage/users/Muciaccia/burst/media/training_history.jpg', bbox_inches='tight', transparent=True)
+fig.savefig('/storage/users/Muciaccia/burst/media/training_history.svg', bbox_inches='tight', transparent=True) # TODO facendo così è possibile salvare i grafici due volte in due formati diversi!
 pyplot.close()
 
 ############################
@@ -210,21 +260,41 @@ minimum_SNR = SNR.min()
 
 ROC_curve = pandas.read_csv('/storage/users/Muciaccia/burst/models/ROC_curve_SNR_{}.csv'.format(minimum_SNR))
 
-default_working_point = ROC_curve[ROC_curve.threshold == 0.5]
+default_threshold = 0.5
+default_working_point = ROC_curve[ROC_curve.threshold == default_threshold]
+
+#x = ROC_curve.false_alarm
+#y = ROC_curve.efficiency
+#m = 1
+#q = y - m*x
+#best_index = numpy.argmax(q)
+#best_working_point = ROC_curve[ROC_curve.index == best_index] # TODO mettere questa threshold nei plot # TODO è veramente il punto di lavoro migliore?
+## y = m*x + q
+## on the diagonal m is 1
+## so q = y - 1*x
+## and so best_index = argmax(q)
+#best_threshold = float(best_working_point.threshold)
 
 pyplot.figure(figsize=[8,8])
-pyplot.title('ROC curve')
+pyplot.title('ROC curve', y=1.02)
 # TODO pyplot.tight_layut()
-pyplot.scatter(ROC_curve.false_alarm, ROC_curve.efficiency)
-pyplot.scatter(default_working_point.false_alarm, default_working_point.efficiency, color='#ff5500', s=150)
+#pyplot.plot([0,100-numpy.max(q)], [numpy.max(q),100], linestyle='dashed', color='gray', label='diagonal slope', zorder=0) # shifted diagonal (slope of the diagonal)
+#pyplot.plot([numpy.min(y),numpy.max(x)], [numpy.min(y),numpy.max(x)],linestyle='dashed', color='gray') # true diagonal
+pyplot.scatter(ROC_curve.false_alarm, ROC_curve.efficiency, label='_nolegend_')
+pyplot.scatter(default_working_point.false_alarm, default_working_point.efficiency, color='#ff5500', s=150, label='P = {} (default)'.format(default_threshold)) # red
+#pyplot.scatter(best_working_point.false_alarm, best_working_point.efficiency, color='#009900', s=150, label='P = {} (best ?)'.format(best_threshold)) # green
 pyplot.xlabel('false alarm (%)')
 pyplot.ylabel('efficiency (%)')
-#pyplot.show()
-pyplot.savefig('/storage/users/Muciaccia/burst/media/ROC_curve_SNR_{}.jpg'.format(minimum_SNR), bbox_inches='tight')
-pyplot.savefig('/storage/users/Muciaccia/burst/media/ROC_curve_SNR_{}.svg'.format(minimum_SNR), bbox_inches='tight')
+pyplot.savefig('/storage/users/Muciaccia/burst/media/ROC_curve_SNR_{}.jpg'.format(minimum_SNR), bbox_inches='tight', transparent=True)
+pyplot.savefig('/storage/users/Muciaccia/burst/media/ROC_curve_SNR_{}.svg'.format(minimum_SNR), bbox_inches='tight', transparent=True)
+#pyplot.legend(loc='lower right')
+pyplot.show()
 pyplot.close()
 
+# TODO trovare il punto ottimale plottando il coefficiente angolare della diagonale
+
 # TODO mettere tutto su un editor che supporti i blocchi di codice e mettere ogni singolo grafico dentro un diverso blocco, in modo da poterli eseguire e rieseguire separatamente
+
 
 ######################
 

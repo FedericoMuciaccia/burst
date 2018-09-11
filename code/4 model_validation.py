@@ -16,7 +16,7 @@ import pandas
 
 import matplotlib
 from matplotlib import pyplot
-matplotlib.rcParams.update({'font.size': 25}) # il default è 10 # TODO attenzione che fa l'override di tutti i settaggi precedenti
+matplotlib.rcParams.update({'font.size': 25}) # 23 # il default è 10 # TODO attenzione che fa l'override di tutti i settaggi precedenti
 
 import config
 
@@ -134,7 +134,7 @@ for signal_to_noise_ratio in all_SNR:
     
     # TODO sistemare le dimensioni del plot
     
-    fig_predictions = pyplot.figure(figsize=[12,8]) # 9, 6
+    fig_predictions = pyplot.figure(figsize=[9,6]) # 9,6 # 12,8
     ax1 = fig_predictions.add_subplot(111) # TODO
     # predicted as noise
     n, bins, rectangles = ax1.hist(predicted_signal_probabilities[true_classes == 0], 
@@ -142,8 +142,9 @@ for signal_to_noise_ratio in all_SNR:
         	                       range=(0,1),
         	                       #normed=True, 
         	                       histtype='step', 
-        	                       #alpha=0.6,
-        	                       color='#ff3300',
+        	                       #alpha=0.6, 
+        	                       linewidth=1.5, 
+        	                       color='#ff3300', 
         	                       label='noise')
     # predicted as signal+noise
     n, bins, rectangles = ax1.hist(predicted_signal_probabilities[true_classes == 1], 
@@ -151,13 +152,14 @@ for signal_to_noise_ratio in all_SNR:
        	                           range=(0,1),
        	                           #normed=True, 
        	                           histtype='step', 
-       	                           #alpha=0.6,
-       	                           color='#0099ff',
-   	                           label='noise + signal')
+       	                           #alpha=0.6, 
+       	                           linewidth=1.5,
+       	                           color='#0099ff', 
+   	                               label='noise + signal')
     ax1.set_title('classifier output (SNR {})'.format(signal_to_noise_ratio)) # OR 'model output'
     ax1.set_ylabel('count') # OR density
     ax1.set_xlabel('predicted probability to be in the "signal" class') # OR 'class prediction'
-    tick_spacing = 0.1
+    tick_spacing = 0.25#0.1
     ax1.set_yscale('log')
     ax1.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(tick_spacing))
     #ax1.legend(loc='best')
@@ -176,6 +178,7 @@ for signal_to_noise_ratio in all_SNR:
     
     # ROC curve
     
+    # TODO questa curva ROC è calcolata sempre con il classificatore addestrato ad SNR minimo ma per segnali con SNR atteso diverso. la curva con SNR minimo è il caso peggiore, per sapere come ottimizzare le varie curve bisognerebbe conoscere la distribuzione attesa degli SNR dei segnali
     
     # def compute_ROC_curve(predicted_signal_probabilities, true_classes):
     

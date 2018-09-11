@@ -32,14 +32,14 @@ ax1_color = '#0033cc' # blue
 ax1.set_title('trigger performances', y=1.05)
 ax1.plot(results_table['SNR'], results_table['efficiency (%)'], color=ax1_color, linewidth=2, alpha=0.8)
 
-ax1.set_xlabel('SNR')
+ax1.set_xlabel('SNR', labelpad=10)
 ax1.set_xticks(config.all_SNR)#, minor=True) # rotation=45, ha = "right"
 ax1.xaxis.set_major_locator(pyplot.MultipleLocator(5))#10))
 #ax1.xaxis.set_minor_locator(pyplot.MultipleLocator(5))
 
 ax1.set_ylim(75-1.25, 100+1.25)#, auto=False)
 ax1.yaxis.set_major_locator(pyplot.MultipleLocator(5))
-ax1.set_ylabel('efficiency (%)', color=ax1_color)
+ax1.set_ylabel('CNN efficiency (%)', color=ax1_color)
 ax1.tick_params(axis='y', labelcolor=ax1_color)
 #ax1.autoscale(enable=False)
 #ax1.margins(0.05, 0.05, tight=False)
@@ -47,7 +47,7 @@ ax1.tick_params(axis='y', labelcolor=ax1_color)
 ax1.grid(linestyle='dashed', which='both')
 
 ax2_color = '#b30000' # red
-ax2.plot(results_table['SNR'], results_table['false alarms (%)'], color=ax2_color, linewidth=2, alpha=0.8)
+ax2.plot(results_table['SNR'], results_table['false alarms (%)'], color=ax2_color, linewidth=2, linestyle='--', alpha=0.8)
 
 ax2.set_ylim(0-0.25, 5+0.25)#, auto=False)
 #ax2.set_yticks(range(5+1))
@@ -57,7 +57,7 @@ ax2.yaxis.set_major_locator(pyplot.MultipleLocator(1))
 #ax2.margins(y=0.5, tight=False)
 #ax2.autoscale(enable=True, tight=False)
 #ax2.autoscale_view(...)
-ax2.set_ylabel('false alarms (%)', color=ax2_color, labelpad=20)
+ax2.set_ylabel('CNN false alarms (%)', color=ax2_color, labelpad=20)
 ax2.tick_params(axis='y', labelcolor=ax2_color)
 
 fig.tight_layout()
