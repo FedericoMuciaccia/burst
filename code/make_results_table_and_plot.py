@@ -47,7 +47,7 @@ ax1.tick_params(axis='y', labelcolor=ax1_color)
 ax1.grid(linestyle='dashed', which='both')
 
 ax2_color = '#b30000' # red
-ax2.plot(results_table['SNR'], results_table['false alarms (%)'], color=ax2_color, linewidth=2, linestyle='--', alpha=0.8)
+ax2.plot(results_table['SNR'], results_table['false alarms (%)'], color=ax2_color, linewidth=2, alpha=0.8) # linestyle='--'
 
 ax2.set_ylim(0-0.25, 5+0.25)#, auto=False)
 #ax2.set_yticks(range(5+1))
